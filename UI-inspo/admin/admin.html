@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TravelEase Admin — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin-style.css" />
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon">✦</span>
+      <div>
+        <div class="brand-name">TravelEase</div>
+        <div class="brand-sub">Admin Portal</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+      <a class="sidebar-link active" data-panel="dashboard" onclick="switchPanel('dashboard')">
+        <span class="nav-icon">◈</span> Dashboard
+      </a>
+
+      <div class="nav-section-label">Manage</div>
+      <a class="sidebar-link" data-panel="tourism" onclick="switchPanel('tourism')">
+        <span class="nav-icon">🏝</span> Tourism
+      </a>
+      <a class="sidebar-link" data-panel="hotels" onclick="switchPanel('hotels')">
+        <span class="nav-icon">🏨</span> Hotels
+      </a>
+      <a class="sidebar-link" data-panel="flights" onclick="switchPanel('flights')">
+        <span class="nav-icon">✈</span> Flights
+      </a>
+      <a class="sidebar-link" data-panel="transport" onclick="switchPanel('transport')">
+        <span class="nav-icon">🚐</span> Transport
+      </a>
+
+      <div class="nav-section-label">Records</div>
+      <a class="sidebar-link" data-panel="bookings" onclick="switchPanel('bookings')">
+        <span class="nav-icon">📋</span> Bookings
+      </a>
+      <a class="sidebar-link" data-panel="booking-history" onclick="switchPanel('booking-history')">
+        <span class="nav-icon">🗂</span> Booking History
+      </a>
+      <a class="sidebar-link" data-panel="feedback" onclick="switchPanel('feedback')">
+        <span class="nav-icon">💬</span> Feedback
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="admin-profile">
+        <div class="admin-avatar">A</div>
+        <div>
+          <div class="admin-name">Admin User</div>
+          <div class="admin-role">Super Admin</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="handleLogout()">
+        <span class="logout-icon">⏻</span>
+        <span>Logout</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN WRAPPER -->
+  <div class="main-wrapper">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+        <div class="page-breadcrumb">
+          <span class="breadcrumb-root">TravelEase</span>
+          <span class="breadcrumb-sep">›</span>
+          <span class="breadcrumb-current" id="breadcrumb-current">Dashboard</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-stat"><span class="ts-dot green"></span>System Online</div>
+        <div class="topbar-date" id="topbar-date"></div>
+      </div>
+    </header>
+
+    <!-- PANELS -->
+    <main class="content-area">
+
+      <!-- ═══ DASHBOARD PANEL ═══ -->
+      <section class="panel active" id="panel-dashboard">
+        <div class="panel-header">
+          <div>
+            <p class="panel-eyebrow">Overview</p>
+            <h2 class="panel-title">Admin Dashboard</h2>
+          </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon teal">🏝</div>
+            <div class="kpi-info">
+              <div class="kpi-label">Total Destinations</div>
+              <div class="kpi-value" id="kpi-destinations">0</div>
+              <div class="kpi-change positive">↑ Active listings</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon gold">🏨</div>
+            <div class="kpi-info">
+              <div class="kpi-label">Total Hotels</div>
+              <div class="kpi-value" id="kpi-hotels">0</div>
+              <div class="kpi-change positive">↑ Properties</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon dark">✈</div>
+            <div class="kpi-info">
+              <div class="kpi-label">Active Flights</div>
+              <div class="kpi-value" id="kpi-flights">0</div>
+              <div class="kpi-change positive">↑ Routes</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon sand">🚐</div>
+            <div class="kpi-info">
+              <div class="kpi-label">Transport Options</div>
+              <div class="kpi-value" id="kpi-transport">0</div>
+              <div class="kpi-change positive">↑ Vehicles</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon teal">📋</div>
+            <div class="kpi-info">
+              <div class="kpi-label">Total Bookings</div>
+              <div class="kpi-value" id="kpi-bookings">0</div>
+              <div class="kpi-change positive">↑ This month</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon gold">💬</div>
+            <div class="kpi-info">
+              <div class="kpi-label">Feedback Reviews</div>
+              <div class="kpi-value" id="kpi-feedback">0</div>
+              <div class="kpi-change positive">↑ Reviews received</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activity + Quick Actions -->
+        <div class="dashboard-grid">
+          <div class="dash-card">
+            <div class="dash-card-title">Recent Bookings</div>
+            <div id="dash-recent-bookings"></div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-title">Recent Feedback</div>
+            <div id="dash-recent-feedback"></div>
+          </div>
+          <div class="dash-card quick-actions">
+            <div class="dash-card-title">Quick Actions</div>
+            <div class="qa-grid">
+              <button class="qa-btn" onclick="switchPanel('tourism')">
+                <span>🏝</span><span>Add Destination</span>
+              </button>
+              <button class="qa-btn" onclick="switchPanel('hotels')">
+                <span>🏨</span><span>Add Hotel</span>
+              </button>
+              <button class="qa-btn" onclick="switchPanel('flights')">
+                <span>✈</span><span>Add Flight</span>
+              </button>
+              <button class="qa-btn" onclick="switchPanel('transport')">
+                <span>🚐</span><span>Add Transport</span>
+              </button>
+              <button class="qa-btn" onclick="switchPanel('bookings')">
+                <span>📋</span><span>View Bookings</span>
+              </button>
+              <button class="qa-btn" onclick="switchPanel('booking-history')">
+                <span>🗂</span><span>Booking History</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ TOURISM PANEL ═══ -->
+      <section class="panel" id="panel-tourism">
+        <div class="panel-header">
+          <div>
+            <p class="panel-eyebrow">Manage</p>
+            <h2 class="panel-title">Tourism Destinations</h2>
+          </div>
+          <button class="btn-add" onclick="openModal('tourism')">+ Add Destination</button>
+        </div>
+
+        <div class="data-toolbar">
+          <input type="text" class="data-search" id="tourism-search" placeholder="Search destinations..." oninput="renderTourismTable()" />
+          <select class="data-filter" id="tourism-filter" onchange="renderTourismTable()">
+            <option value="">All Categories</option>
+            <option>Island</option><option>Beach</option><option>Diving</option>
+            <option>Cave</option><option>Lagoon</option><option>Wildlife</option>
+            <option>Cultural</option><option>Adventure</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th><th>Name</th><th>Category</th><th>Location</th>
+                <th>Rating</th><th>Entry Fee</th><th>Best Season</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tourism-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ═══ HOTELS PANEL ═══ -->
+      <section class="panel" id="panel-hotels">
+        <div class="panel-header">
+          <div>
+            <p class="panel-eyebrow">Manage</p>
+            <h2 class="panel-title">Hotels & Properties</h2>
+          </div>
+          <button class="btn-add" onclick="openModal('hotels')">+ Add Hotel</button>
+        </div>
+
+        <div class="data-toolbar">
+          <input type="text" class="data-search" id="hotels-search" placeholder="Search hotels..." oninput="renderHotelsTable()" />
+          <select class="data-filter" id="hotels-filter" onchange="renderHotelsTable()">
+            <option value="">All Locations</option>
+            <option>Puerto Princesa</option><option>El Nido</option>
+            <option>Coron</option><option>Port Barton</option><option>San Vicente</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th><th>Property Name</th><th>Location</th><th>Stars</th>
+                <th>Base Rate</th><th>Rooms Avail.</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="hotels-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ═══ FLIGHTS PANEL ═══ -->
+      <section class="panel" id="panel-flights">
+        <div class="panel-header">
+          <div>
+            <p class="panel-eyebrow">Manage</p>
+            <h2 class="panel-title">Flight Routes</h2>
+          </div>
+          <button class="btn-add" onclick="openModal('flights')">+ Add Flight</button>
+        </div>
+
+        <div class="data-toolbar">
+          <input type="text" class="data-search" id="flights-search" placeholder="Search airline or route..." oninput="renderFlightsTable()" />
+          <select class="data-filter" id="flights-filter" onchange="renderFlightsTable()">
+            <option value="">All Routes</option>
+            <option>MNL → PPS</option><option>MNL → ENI</option><option>MNL → USU</option>
+            <option>CEB → PPS</option><option>CEB → USU</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th><th>Airline</th><th>Flight No.</th><th>Route</th>
+                <th>Depart</th><th>Arrive</th><th>Price</th><th>Seats</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="flights-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ═══ TRANSPORT PANEL ═══ -->
+      <section class="panel" id="panel-transport">
+        <div class="panel-header">
+          <div>
+            <p class="panel-eyebrow">Manage</p>
+            <h2 class="panel-title">Transport Options</h2>
+          </div>
+          <button class="btn-add" onclick="openModal('transport')">+ Add Transport</button>
+        </div>
+
+        <div class="data-toolbar">
+          <input type="text" class="data-search" id="transport-search" placeholder="Search transport or route..." oninput="renderTransportTable()" />
+          <select class="data-filter" id="transport-filter" onchange="renderTransportTable()">
+            <option value="">All Types</option>
+            <option>Van</option><option>Tricycle</option><option>Shuttle</option>
+            <option>Jeepney</option><option>Speedboat</option><option>Ferry</option><option>Motorcycle</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th><th>Operator</th><th>Type</th><th>Route</th>
+                <th>Capacity</th><th>Rate</th><th>Schedule</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="transport-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ═══ BOOKINGS PANEL ═══ -->
+      <section class="panel" id="panel-bookings">
+        <div class="panel-header">
+          <div>
+            <p class="panel-eyebrow">Records</p>
+            <h2 class="panel-title">Booking Records</h2>
+          </div>
+        </div>
+
+        <div class="data-toolbar">
+          <input type="text" class="data-search" id="bookings-search" placeholder="Search by guest or property..." oninput="renderBookingsTable()" />
+          <select class="data-filter" id="bookings-filter" onchange="renderBookingsTable()">
+            <option value="">All Types</option>
+            <option>Hotel</option><option>Flight</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Ref #</th><th>Guest & Email</th><th>Type</th><th>Property / Route</th>
+                <th>Check-in / Date</th><th>Guests</th><th>Total</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="bookings-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ═══ BOOKING HISTORY PANEL ═══ -->
+      <section class="panel" id="panel-booking-history">
+        <div class="panel-header">
+          <div>
+            <p class="panel-eyebrow">Records</p>
+            <h2 class="panel-title">Booking History</h2>
+          </div>
+        </div>
+
+        <div class="data-toolbar">
+          <input type="text" class="data-search" id="history-search" placeholder="Search by guest, property, or ref..." oninput="renderBookingHistoryTable()" />
+          <select class="data-filter" id="history-type-filter" onchange="renderBookingHistoryTable()">
+            <option value="">All Types</option>
+            <option>Hotel</option><option>Flight</option>
+          </select>
+          <select class="data-filter" id="history-status-filter" onchange="renderBookingHistoryTable()">
+            <option value="">All Statuses</option>
+            <option>Confirmed</option><option>Pending</option><option>Cancelled</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Ref #</th><th>Guest & Email</th><th>Type</th><th>Property / Route</th>
+                <th>Check-in / Date</th><th>Guests</th><th>Total</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ═══ FEEDBACK PANEL ═══ -->
+      <section class="panel" id="panel-feedback">
+        <div class="panel-header">
+          <div>
+            <p class="panel-eyebrow">Records</p>
+            <h2 class="panel-title">Traveler Feedback</h2>
+          </div>
+        </div>
+
+        <div class="data-toolbar">
+          <input type="text" class="data-search" id="feedback-search" placeholder="Search feedback..." oninput="renderFeedbackTable()" />
+          <select class="data-filter" id="feedback-filter" onchange="renderFeedbackTable()">
+            <option value="">All Categories</option>
+            <option>Tourism</option><option>Hotel</option><option>Flight</option>
+            <option>Transport</option><option>Food & Dining</option><option>General</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th><th>Reviewer</th><th>Destination</th><th>Category</th>
+                <th>Rating</th><th>Review</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="feedback-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ═══ UNIVERSAL MODAL ═══ -->
+  <div class="modal-overlay" id="modal-overlay" style="display:none;" onclick="closeModalOverlay(event)">
+    <div class="modal-box" id="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-title">Modal</h3>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- LOGOUT CONFIRM MODAL -->
+  <div class="modal-overlay" id="logout-modal" style="display:none;">
+    <div class="modal-box" style="max-width:400px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Confirm Logout</h3>
+        <button class="modal-close" onclick="document.getElementById('logout-modal').style.display='none'">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--text);font-size:14.5px;line-height:1.6;margin-bottom:24px;">Are you sure you want to logout from the TravelEase Admin Portal?</p>
+        <div class="modal-actions">
+          <button class="btn-modal-cancel" onclick="document.getElementById('logout-modal').style.display='none'">Stay</button>
+          <button class="btn-modal-save" style="background:var(--danger);" onclick="confirmLogout()">Logout</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <script src="admin-script.js"></script>
+</body>
+</html>

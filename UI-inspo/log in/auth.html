@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TravelEase – Sign In / Sign Up</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="auth.css" />
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <span class="brand-icon">✦</span>
+      <span class="brand-name">TravelEase</span>
+      <span class="brand-sub">Palawan</span>
+    </div>
+  </nav>
+
+  <!-- AUTH LAYOUT -->
+  <div class="auth-layout">
+
+    <!-- RIGHT PANEL — form -->
+    <div class="auth-panel-right">
+      <div class="auth-card">
+
+        <!-- Tab Toggle -->
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="tab-login" onclick="showLogin()">Sign In</button>
+          <button class="auth-tab" id="tab-signup" onclick="showSignup()">Sign Up</button>
+          <div class="auth-tab-indicator" id="tab-indicator"></div>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <div class="auth-form" id="login-form">
+          <div class="form-head">
+            <h2 class="form-title">Welcome Back</h2>
+            <p class="form-subtitle">Sign in to continue planning your Palawan adventure</p>
+          </div>
+
+          <div class="form-group">
+            <label>Email Address</label>
+            <div class="input-wrap">
+              <span class="input-icon">✉</span>
+              <input type="email" id="login-email" placeholder="your@email.com" />
+            </div>
+            <span class="field-error" id="login-email-err"></span>
+          </div>
+
+          <div class="form-group">
+            <label>Password</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔒</span>
+              <input type="password" id="login-password" placeholder="Enter your password" />
+              <button class="toggle-pw" onclick="togglePassword('login-password', this)">👁</button>
+            </div>
+            <span class="field-error" id="login-pw-err"></span>
+          </div>
+
+          <div class="form-row">
+            <label class="checkbox-label">
+              <input type="checkbox" id="remember-me" />
+              <span class="checkmark"></span>
+              Remember me
+            </label>
+            <a href="#" class="forgot-link" onclick="showForgot()">Forgot password?</a>
+          </div>
+
+          <button class="btn-primary full-width" onclick="handleLogin()">
+            <span>Sign In</span>
+            <span class="btn-arrow">→</span>
+          </button>
+
+          <p class="form-switch">Don't have an account? <a href="#" onclick="showSignup()">Sign up free</a></p>
+        </div>
+
+        <!-- SIGNUP FORM -->
+        <div class="auth-form" id="signup-form" style="display:none;">
+          <div class="form-head">
+            <h2 class="form-title">Create Account</h2>
+            <p class="form-subtitle">Join TravelEase and start exploring Palawan today</p>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label>First Name</label>
+              <div class="input-wrap">
+                <span class="input-icon">👤</span>
+                <input type="text" id="su-firstname" placeholder="Juan" />
+              </div>
+              <span class="field-error" id="su-fname-err"></span>
+            </div>
+            <div class="form-group">
+              <label>Last Name</label>
+              <div class="input-wrap">
+                <span class="input-icon">👤</span>
+                <input type="text" id="su-lastname" placeholder="dela Cruz" />
+              </div>
+              <span class="field-error" id="su-lname-err"></span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Email Address</label>
+            <div class="input-wrap">
+              <span class="input-icon">✉</span>
+              <input type="email" id="su-email" placeholder="your@email.com" />
+            </div>
+            <span class="field-error" id="su-email-err"></span>
+          </div>
+
+          <div class="form-group">
+            <label>Password</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔒</span>
+              <input type="password" id="su-password" placeholder="Create a strong password" oninput="checkStrength()" />
+              <button class="toggle-pw" onclick="togglePassword('su-password', this)">👁</button>
+            </div>
+            <div class="pw-strength-bar">
+              <div class="pw-strength-fill" id="pw-fill"></div>
+            </div>
+            <span class="pw-strength-label" id="pw-label"></span>
+            <span class="field-error" id="su-pw-err"></span>
+          </div>
+
+          <div class="form-group">
+            <label>Confirm Password</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔒</span>
+              <input type="password" id="su-confirm" placeholder="Repeat your password" />
+              <button class="toggle-pw" onclick="togglePassword('su-confirm', this)">👁</button>
+            </div>
+            <span class="field-error" id="su-conf-err"></span>
+          </div>
+
+          <button class="btn-primary full-width" onclick="handleSignup()">
+            <span>Create Account</span>
+            <span class="btn-arrow">→</span>
+          </button>
+
+          <p class="form-switch">Already have an account? <a href="#" onclick="showLogin()">Sign in</a></p>
+        </div>
+
+        <!-- FORGOT PASSWORD -->
+        <div class="auth-form" id="forgot-form" style="display:none;">
+          <div class="form-head">
+            <h2 class="form-title">Reset Password</h2>
+            <p class="form-subtitle">Enter your email and we'll send you a reset link</p>
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <div class="input-wrap">
+              <span class="input-icon">✉</span>
+              <input type="email" id="forgot-email" placeholder="your@email.com" />
+            </div>
+            <span class="field-error" id="forgot-err"></span>
+          </div>
+          <button class="btn-primary full-width" onclick="handleForgot()">
+            <span>Send Reset Link</span>
+            <span class="btn-arrow">→</span>
+          </button>
+          <p class="form-switch"><a href="#" onclick="showLogin()">← Back to Sign In</a></p>
+          <div class="forgot-success" id="forgot-success" style="display:none;">
+            ✓ Reset link sent! Check your inbox.
+          </div>
+        </div>
+
+        <!-- SUCCESS STATE -->
+        <div class="auth-form success-panel" id="success-panel" style="display:none;">
+          <div class="success-icon">✦</div>
+          <h2 class="form-title">You're In!</h2>
+          <p class="form-subtitle">Welcome to TravelEase. Your Palawan adventure begins now.</p>
+          <button class="btn-primary full-width" onclick="window.location.href='index.html'">Explore Palawan →</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <script src="auth.js"></script>
+</body>
+</html>

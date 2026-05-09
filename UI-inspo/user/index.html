@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TravelEase – Discover Palawan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-brand">
+      <span class="brand-icon">✦</span>
+      <span class="brand-name">TravelEase</span>
+      <span class="brand-sub">Palawan</span>
+    </div>
+    <ul class="nav-links">
+      <li><a href="#" class="nav-link active" data-tab="home">Home</a></li>
+      <li><a href="#" class="nav-link" data-tab="tourism">Destinations</a></li>
+      <li><a href="#" class="nav-link" data-tab="hotels">Hotels</a></li>
+      <li><a href="#" class="nav-link" data-tab="flights">Flights</a></li>
+      <li><a href="#" class="nav-link" data-tab="transport">Transport</a></li>
+      <li><a href="#" class="nav-link" data-tab="feedback">Feedback</a></li>
+    </ul>
+    <div class="nav-cta">
+      <button class="btn-nav-cta">Plan Trip</button>
+    </div>
+    <button class="hamburger" id="hamburger" aria-label="Toggle menu" onclick="toggleMobileMenu()">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <!-- MOBILE MENU -->
+  <div class="mobile-menu" id="mobile-menu">
+    <ul class="mobile-nav-links">
+      <li><a href="#" class="mobile-nav-link active" data-tab="home" onclick="mobileNav('home')">🏠 Home</a></li>
+      <li><a href="#" class="mobile-nav-link" data-tab="tourism" onclick="mobileNav('tourism')">📍 Destinations</a></li>
+      <li><a href="#" class="mobile-nav-link" data-tab="hotels" onclick="mobileNav('hotels')">🏨 Hotels</a></li>
+      <li><a href="#" class="mobile-nav-link" data-tab="flights" onclick="mobileNav('flights')">✈️ Flights</a></li>
+      <li><a href="#" class="mobile-nav-link" data-tab="transport" onclick="mobileNav('transport')">🚌 Transport</a></li>
+      <li><a href="#" class="mobile-nav-link" data-tab="feedback" onclick="mobileNav('feedback')">💬 Feedback</a></li>
+    </ul>
+    <button class="mobile-cta" onclick="mobileNav('tourism')">Plan My Trip</button>
+  </div>
+
+  <!-- HERO -->
+  <section class="hero" id="home-section">
+    <div class="hero-bg">
+      <div class="hero-overlay"></div>
+    </div>
+    <div class="hero-content">
+      <p class="hero-eyebrow">The Last Frontier of the Philippines</p>
+      <h1 class="hero-title">Discover<br><em>Palawan</em></h1>
+      <p class="hero-desc">Crystal waters, hidden lagoons, and world-class adventure await. Your complete travel companion for Palawan's most remarkable destinations.</p>
+      <div class="hero-actions">
+        <button class="btn-primary" onclick="switchTab('tourism')">Explore Destinations</button>
+        <button class="btn-ghost" onclick="switchTab('hotels')">Find Hotels</button>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><strong>100+</strong><span>Destinations</span></div>
+        <div class="stat-divider"></div>
+        <div class="stat"><strong>50+</strong><span>Hotels</span></div>
+        <div class="stat-divider"></div>
+        <div class="stat"><strong>12+</strong><span>Airlines</span></div>
+      </div>
+    </div>
+    <div class="hero-scroll-hint">
+      <span>Scroll to explore</span>
+      <div class="scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- MAIN CONTENT TABS -->
+  <main class="main-content">
+
+    <!-- TOURISM TAB -->
+    <section class="tab-section" id="tourism-section" style="display:none;">
+      <div class="section-header">
+        <div>
+          <p class="section-eyebrow">Explore</p>
+          <h2 class="section-title">100+ Destinations in Palawan</h2>
+        </div>
+        <div class="search-bar">
+          <input type="text" id="tourism-search" placeholder="Search destinations, activities..." />
+          <button class="btn-search" onclick="filterDestinations()">🔍</button>
+        </div>
+      </div>
+      <div class="filter-chips" id="filter-chips">
+        <button class="chip active" onclick="filterByCategory('All')">All</button>
+        <button class="chip" onclick="filterByCategory('Island')">Islands</button>
+        <button class="chip" onclick="filterByCategory('Beach')">Beaches</button>
+        <button class="chip" onclick="filterByCategory('Diving')">Diving</button>
+        <button class="chip" onclick="filterByCategory('Cave')">Caves</button>
+        <button class="chip" onclick="filterByCategory('Lagoon')">Lagoons</button>
+        <button class="chip" onclick="filterByCategory('Wildlife')">Wildlife</button>
+        <button class="chip" onclick="filterByCategory('Cultural')">Cultural</button>
+        <button class="chip" onclick="filterByCategory('Adventure')">Adventure</button>
+      </div>
+      <div class="destinations-grid" id="destinations-grid"></div>
+      <div class="load-more-wrap">
+        <button class="btn-load-more" id="load-more-btn" onclick="loadMoreDestinations()">Load More Destinations</button>
+      </div>
+    </section>
+
+    <!-- DESTINATION MODAL -->
+    <div class="modal-overlay" id="dest-modal" style="display:none;">
+      <div class="modal-card" id="dest-modal-content"></div>
+    </div>
+
+    <!-- HOTELS TAB -->
+    <section class="tab-section" id="hotels-section" style="display:none;">
+      <div class="section-header">
+        <div>
+          <p class="section-eyebrow">Accommodations</p>
+          <h2 class="section-title">100+ Hotels &amp; Lodgings in Palawan</h2>
+        </div>
+        <div class="search-bar">
+          <input type="text" id="hotel-search" placeholder="Search hotels, areas, amenities..." oninput="searchHotels()"/>
+          <button class="btn-search" onclick="searchHotels()">🔍</button>
+        </div>
+      </div>
+
+      <!-- Area filters -->
+      <div class="filter-chips" id="hotel-area-chips">
+        <button class="chip active" onclick="filterHotelsByArea('All',this)">All Areas</button>
+        <button class="chip" onclick="filterHotelsByArea('El Nido',this)">El Nido</button>
+        <button class="chip" onclick="filterHotelsByArea('Coron',this)">Coron</button>
+        <button class="chip" onclick="filterHotelsByArea('Puerto Princesa',this)">Puerto Princesa</button>
+        <button class="chip" onclick="filterHotelsByArea('Port Barton',this)">Port Barton</button>
+        <button class="chip" onclick="filterHotelsByArea('San Vicente',this)">San Vicente</button>
+        <button class="chip" onclick="filterHotelsByArea('Other Palawan',this)">Other Palawan</button>
+      </div>
+
+      <!-- Star filters -->
+      <div class="filter-chips" id="hotel-star-chips" style="margin-top:8px;">
+        <button class="chip active" onclick="filterHotelsByStars('All',this)">All Stars</button>
+        <button class="chip" onclick="filterHotelsByStars('5',this)">★★★★★</button>
+        <button class="chip" onclick="filterHotelsByStars('4',this)">★★★★</button>
+        <button class="chip" onclick="filterHotelsByStars('3',this)">★★★</button>
+        <button class="chip" onclick="filterHotelsByStars('2',this)">★★</button>
+      </div>
+
+      <!-- Hotel Cards -->
+      <div class="hotel-cards-grid" id="hotel-cards-grid"></div>
+      <div class="load-more-wrap">
+        <button class="btn-load-more" id="hotel-load-more" onclick="loadMoreHotels()" style="display:none;">Load More Hotels</button>
+      </div>
+    </section>
+
+    <!-- ROOM BOOKING MODAL -->
+    <div class="modal-overlay" id="room-modal" style="display:none;">
+      <div class="modal-card room-modal-card" id="room-modal-content"></div>
+    </div>
+
+    <!-- FLIGHTS TAB -->
+    <section class="tab-section" id="flights-section" style="display:none;">
+      <div class="section-header">
+        <div>
+          <p class="section-eyebrow">Air Travel</p>
+          <h2 class="section-title">Flights to Palawan</h2>
+        </div>
+      </div>
+      <div class="flight-search-panel">
+        <div class="trip-type-toggle">
+          <button class="trip-btn active" id="one-way-btn" onclick="setTripType('one-way')">One Way</button>
+          <button class="trip-btn" id="round-trip-btn" onclick="setTripType('round-trip')">Round Trip</button>
+        </div>
+        <div class="flight-form">
+          <div class="flight-field">
+            <label>From</label>
+            <select id="flight-from">
+              <option>Manila (MNL)</option>
+              <option>Cebu (CEB)</option>
+              <option>Davao (DVO)</option>
+              <option>Iloilo (ILO)</option>
+              <option>Bacolod (BCD)</option>
+              <option>Clark (CRK)</option>
+            </select>
+          </div>
+          <div class="flight-swap" onclick="swapAirports()">⇄</div>
+          <div class="flight-field">
+            <label>To</label>
+            <select id="flight-to">
+              <option>Puerto Princesa (PPS)</option>
+              <option>El Nido (ENI)</option>
+              <option>Busuanga/Coron (USU)</option>
+            </select>
+          </div>
+          <div class="flight-field">
+            <label>Depart</label>
+            <input type="date" id="flight-depart" />
+          </div>
+          <div class="flight-field" id="return-field" style="display:none;">
+            <label>Return</label>
+            <input type="date" id="flight-return" />
+          </div>
+          <div class="flight-field">
+            <label>Passengers</label>
+            <select id="flight-pax">
+              <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+            </select>
+          </div>
+          <button class="btn-gds-search" onclick="searchFlights()">Search Flights</button>
+        </div>
+      </div>
+      <div id="flight-results" style="display:none;">
+        <div class="flight-results-header">Available Flights</div>
+        <div id="flight-cards"></div>
+      </div>
+    </section>
+
+    <!-- TRANSPORT TAB -->
+    <section class="tab-section" id="transport-section" style="display:none;">
+      <div class="section-header">
+        <div>
+          <p class="section-eyebrow">Getting Around</p>
+          <h2 class="section-title">Transportation Fares</h2>
+        </div>
+      </div>
+      <div class="transport-grid" id="transport-grid"></div>
+    </section>
+
+    <!-- FEEDBACK TAB -->
+    <section class="tab-section" id="feedback-section" style="display:none;">
+      <div class="section-header">
+        <div>
+          <p class="section-eyebrow">Share Your Experience</p>
+          <h2 class="section-title">Traveler Feedback</h2>
+        </div>
+      </div>
+      <div class="feedback-layout">
+        <div class="feedback-form-card">
+          <h3>Submit Your Review</h3>
+          <div class="form-group">
+            <label>Your Name</label>
+            <input type="text" id="fb-name" placeholder="Enter your name" />
+          </div>
+          <div class="form-group">
+            <label>Destination Visited</label>
+            <input type="text" id="fb-destination" placeholder="e.g. El Nido, Underground River" />
+          </div>
+          <div class="form-group">
+            <label>Overall Rating</label>
+            <div class="star-rating" id="star-rating">
+              <span class="star" data-val="1">★</span>
+              <span class="star" data-val="2">★</span>
+              <span class="star" data-val="3">★</span>
+              <span class="star" data-val="4">★</span>
+              <span class="star" data-val="5">★</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Category</label>
+            <select id="fb-category">
+              <option>Tourism</option>
+              <option>Hotel</option>
+              <option>Flight</option>
+              <option>Transport</option>
+              <option>Food & Dining</option>
+              <option>General</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Your Experience</label>
+            <textarea id="fb-message" rows="5" placeholder="Tell us about your experience in Palawan..."></textarea>
+          </div>
+          <button class="btn-primary full-width" onclick="submitFeedback()">Submit Feedback</button>
+          <div class="feedback-success" id="fb-success" style="display:none;">
+            ✓ Thank you! Your feedback has been submitted.
+          </div>
+        </div>
+        <div class="reviews-panel">
+          <h3>Recent Reviews</h3>
+          <div id="reviews-list"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <span class="brand-icon">✦</span>
+        <span>TravelEase Palawan</span>
+      </div>
+      <p class="footer-copy">© 2025 TravelEase. Academic Demonstration Platform · Palawan, Philippines</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
