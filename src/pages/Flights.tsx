@@ -112,7 +112,7 @@ const Flights: React.FC = () => {
       return;
     }
     setSearching(true);
-    const { data, error } = await supabase.from('flights')
+    const { data } = await supabase.from('flights')
       .select('*')
       .eq('origin', from.split('(')[1].replace(')', ''))
       .eq('destination', to.split('(')[1].replace(')', ''));

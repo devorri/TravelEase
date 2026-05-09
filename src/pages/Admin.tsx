@@ -16,7 +16,7 @@ const Admin: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState<any>({});
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
 
   useEffect(() => {
     fetchCounts();
@@ -69,7 +69,7 @@ const Admin: React.FC = () => {
       const filePath = `${fileName}`;
 
       // Upload to the bucket matching the active panel name
-      const { error: uploadError, data } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from(activePanel)
         .upload(filePath, file);
 

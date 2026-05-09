@@ -24,7 +24,7 @@ const Destinations: React.FC = () => {
 
   const fetchDestinations = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('destinations')
       .select('*');
     
