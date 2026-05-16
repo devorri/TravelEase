@@ -97,18 +97,43 @@ const Hotels: React.FC = () => {
     const ref = `TE-HTL-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
     const roomType = ROOM_TYPES.find(rt => rt.key === (selectedRoom.room_type || 'standard'));
 
+    // FINAL AVAILABILITY CHECK (Avoid double booking)
+    const { data: finalCheck } = await supabase
+      .from('bookings').select('id, details')
+      .eq('room_id', selectedRoom.id)
+      .neq('status', 'cancelled');
+
+    const isDoubleBooked = finalCheck?.some(b => {
+      const bCheckIn = new Date(b.details.check_in);
+      const bCheckOut = new Date(b.details.check_out);
+      const sCheckIn = new Date(bookingDetails.checkIn);
+      const sCheckOut = new Date(bookingDetails.checkOut);
+      return sCheckIn < bCheckOut && sCheckOut > bCheckIn;
+    });
+
+    if (isDoubleBooked) {
+      notify('error', 'Booking Conflict', 'This room was just booked by someone else! Please choose another room or different dates.');
+      fetchRoomsAndAvailability();
+      return;
+    }
+
     const { error } = await supabase.from('bookings').insert([{
-      user_id: user.id, type: 'hotel', entity_id: selectedHotel?.id,
-      room_id: selectedRoom.id, booking_reference: ref,
+      user_id: user.id,
+      type: 'hotel',
+      entity_id: selectedHotel?.id,
+      room_id: selectedRoom.id,
+      booking_reference: ref,
       details: {
         hotel_name: selectedHotel?.name,
-        price: selectedHotel?.price_per_night,
+        room_number: selectedRoom.room_number,
+        room_type: selectedRoom.room_type,
+        building: selectedRoom.building,
+        max_guests: selectedRoom.max_guests,
         check_in: bookingDetails.checkIn,
         check_out: bookingDetails.checkOut,
         pax: bookingDetails.pax,
-        room_number: selectedRoom.room_number,
-        room_type: roomType?.label || 'Standard Room',
-        max_guests: roomType?.maxGuests || 2,
+        price: selectedHotel?.price_per_night,
+        total_amount: selectedHotel ? selectedHotel.price_per_night * 1 : 0, // Simplified for now
         booking_reference: ref
       }
     }]);
@@ -254,12 +279,14 @@ const Hotels: React.FC = () => {
                         <div className="room-grid">
                           {roomsByType[activeRoomType as keyof typeof roomsByType]?.map(room => {
                             const isBooked = bookedRoomIds.includes(room.id);
+                            const isOccupied = room.status !== 'available';
+                            const isDisabled = isBooked || isOccupied;
                             return (
                               <button key={room.id}
-                                className={`room-btn ${selectedRoom?.id === room.id ? 'selected' : ''}`}
-                                disabled={isBooked}
+                                className={`room-btn ${selectedRoom?.id === room.id ? 'selected' : ''} ${isOccupied ? 'occupied' : ''}`}
+                                disabled={isDisabled}
                                 onClick={() => setSelectedRoom(room)}
-                                title={isBooked ? 'Already booked for these dates' : `Room ${room.room_number}`}
+                                title={isOccupied ? 'Currently Occupied' : isBooked ? 'Already booked for these dates' : `Room ${room.room_number}`}
                               >
                                 {room.room_number}
                               </button>

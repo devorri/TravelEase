@@ -1035,6 +1035,12 @@
   opacity: 0.6;
 }
 
+.room-btn.occupied {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #ef4444;
+}
+
 .building-label {
   font-size: 0.8rem;
   font-weight: 700;

@@ -18,6 +18,14 @@ const Admin: React.FC = () => {
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
   const { logout } = useAuth();
 
+  // Room management state
+  const [showRoomModal, setShowRoomModal] = useState(false);
+  const [roomHotel, setRoomHotel] = useState<any>(null);
+  const [hotelRooms, setHotelRooms] = useState<any[]>([]);
+  const [roomsLoading, setRoomsLoading] = useState(false);
+  const [newRoom, setNewRoom] = useState({ room_number: '', building: 'Building A', room_type: 'standard', max_guests: 2 });
+  const [bulkCount, setBulkCount] = useState(10);
+
   useEffect(() => { fetchCounts(); }, []);
   useEffect(() => { if (activePanel !== 'dashboard') fetchTableData(); }, [activePanel]);
 
@@ -110,6 +118,71 @@ const Admin: React.FC = () => {
       await supabase.from(table).delete().eq('id', id);
       fetchTableData();
       fetchCounts();
+    }
+  };
+
+  /* ── Room Management ── */
+  const openRoomManager = async (hotel: any) => {
+    setRoomHotel(hotel);
+    setShowRoomModal(true);
+    setNewRoom({ room_number: '', building: 'Building A', room_type: 'standard', max_guests: 2 });
+    await fetchRooms(hotel.id);
+  };
+
+  const fetchRooms = async (hotelId: string) => {
+    setRoomsLoading(true);
+    const { data } = await supabase.from('hotel_rooms').select('*').eq('hotel_id', hotelId).order('room_number', { ascending: true });
+    if (data) setHotelRooms(data);
+    setRoomsLoading(false);
+  };
+
+  const addRoom = async () => {
+    if (!newRoom.room_number.trim()) return alert('Please enter a room number');
+    if (!roomHotel) return;
+    const { error } = await supabase.from('hotel_rooms').insert([{
+      hotel_id: roomHotel.id,
+      room_number: newRoom.room_number.trim(),
+      building: newRoom.building,
+      room_type: newRoom.room_type,
+      max_guests: newRoom.max_guests,
+      status: 'available'
+    }]);
+    if (error) {
+      alert(error.message.includes('unique') ? 'Room number already exists for this hotel.' : error.message);
+    } else {
+      setNewRoom({ ...newRoom, room_number: '' });
+      fetchRooms(roomHotel.id);
+    }
+  };
+
+  const addBulkRooms = async () => {
+    if (!roomHotel) return;
+    const building = newRoom.building;
+    const prefix = building === 'Building A' ? '1' : building === 'Building B' ? '2' : '3';
+    const type = building === 'Building A' ? 'standard' : building === 'Building B' ? 'deluxe' : 'suite';
+    const maxG = building === 'Building A' ? 2 : building === 'Building B' ? 4 : 6;
+    const rooms = Array.from({ length: bulkCount }, (_, i) => ({
+      hotel_id: roomHotel.id,
+      room_number: `${prefix}${String(i + 1).padStart(2, '0')}`,
+      building,
+      room_type: type,
+      max_guests: maxG,
+      status: 'available'
+    }));
+    const { error } = await supabase.from('hotel_rooms').insert(rooms);
+    if (error) {
+      alert('Some rooms may already exist: ' + error.message);
+    }
+    fetchRooms(roomHotel.id);
+  };
+
+  const deleteRoom = async (roomId: string) => {
+    if (!window.confirm('Delete this room?')) return;
+    const { error } = await supabase.from('hotel_rooms').delete().eq('id', roomId);
+    if (error) {
+      alert('Cannot delete: ' + error.message);
+    } else {
+      fetchRooms(roomHotel.id);
     }
   };
 
@@ -240,7 +313,7 @@ const Admin: React.FC = () => {
   const getTableHeaders = () => {
     switch (activePanel) {
       case 'destinations': return ['Image', 'Name', 'Location', 'Category', 'Actions'];
-      case 'hotels': return ['Image', 'Name', 'Area', 'Price/Night', 'Stars', 'Actions'];
+      case 'hotels': return ['Image', 'Name', 'Area', 'Price/Night', 'Stars', 'Rooms', 'Actions'];
       case 'flights': return ['Airline', 'Flight #', 'Route', 'Price', 'Actions'];
       case 'transportation': return ['Image', 'Type', 'Route', 'Fare', 'Actions'];
       case 'feedback': return ['User', 'Rating', 'Comment', 'Date', 'Actions'];
@@ -264,6 +337,7 @@ const Admin: React.FC = () => {
           <td>{item.area || 'N/A'}</td>
           <td>₱{Number(item.price_per_night || 0).toLocaleString()}</td>
           <td><span style={{color:'#fbbf24'}}>{'★'.repeat(item.stars || 0)}</span></td>
+          <td><button className="btn-rooms" onClick={() => openRoomManager(item)}>🚪 Manage</button></td>
         </>);
       case 'flights':
         return (<>
@@ -599,6 +673,93 @@ const Admin: React.FC = () => {
                 <button type="submit" className="btn-modal-save">Save Changes</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Room Management Modal */}
+      {showRoomModal && roomHotel && (
+        <div className="modal-overlay">
+          <div className="modal-box room-modal">
+            <div className="modal-header">
+              <h3 className="modal-title">🚪 Rooms — {roomHotel.name}</h3>
+              <button className="modal-close" onClick={() => setShowRoomModal(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              {/* Add single room */}
+              <div className="room-add-section">
+                <h4>Add Room</h4>
+                <div className="room-add-row">
+                  <input
+                    type="text" placeholder="Room # (e.g. 101)"
+                    value={newRoom.room_number}
+                    onChange={e => setNewRoom({ ...newRoom, room_number: e.target.value })}
+                  />
+                  <select value={newRoom.building} onChange={e => {
+                    const b = e.target.value;
+                    setNewRoom({
+                      ...newRoom,
+                      building: b,
+                      room_type: b === 'Building A' ? 'standard' : b === 'Building B' ? 'deluxe' : 'suite',
+                      max_guests: b === 'Building A' ? 2 : b === 'Building B' ? 4 : 6
+                    });
+                  }}>
+                    <option value="Building A">Building A (Standard)</option>
+                    <option value="Building B">Building B (Deluxe)</option>
+                    <option value="Building C">Building C (Suite)</option>
+                  </select>
+                  <button className="btn-modal-save" type="button" onClick={addRoom}>+ Add</button>
+                </div>
+              </div>
+
+              {/* Bulk add rooms */}
+              <div className="room-add-section">
+                <h4>Quick Add (Bulk)</h4>
+                <div className="room-add-row">
+                  <select value={newRoom.building} onChange={e => setNewRoom({ ...newRoom, building: e.target.value })}>
+                    <option value="Building A">Building A (Standard)</option>
+                    <option value="Building B">Building B (Deluxe)</option>
+                    <option value="Building C">Building C (Suite)</option>
+                  </select>
+                  <select value={bulkCount} onChange={e => setBulkCount(parseInt(e.target.value))}>
+                    {[5, 10, 15, 20].map(n => <option key={n} value={n}>{n} rooms</option>)}
+                  </select>
+                  <button className="btn-modal-save" type="button" onClick={addBulkRooms}>Generate</button>
+                </div>
+              </div>
+
+              {/* Room list */}
+              <div className="room-list-section">
+                <h4>Current Rooms ({hotelRooms.length})</h4>
+                {roomsLoading ? <p>Loading rooms...</p> : hotelRooms.length === 0 ? (
+                  <p style={{ color: '#94a3b8', textAlign: 'center', padding: '20px' }}>No rooms added yet. Use the form above to add rooms.</p>
+                ) : (
+                  <div className="room-type-groups">
+                    {['Building A', 'Building B', 'Building C'].map(bld => {
+                      const bldRooms = hotelRooms.filter(r => r.building === bld);
+                      if (bldRooms.length === 0) return null;
+                      const typeLabel = bld === 'Building A' ? '🛏️ Standard' : bld === 'Building B' ? '🛋️ Deluxe' : '👑 Suite';
+                      return (
+                        <div key={bld} className="room-group">
+                          <div className="room-group-header">
+                            <span>{typeLabel} — {bld}</span>
+                            <span className="room-group-count">{bldRooms.length} rooms</span>
+                          </div>
+                          <div className="room-grid-admin">
+                            {bldRooms.map(room => (
+                              <div key={room.id} className={`room-chip ${room.status === 'available' ? '' : 'booked'}`}>
+                                <span>{room.room_number}</span>
+                                <button className="room-chip-delete" onClick={() => deleteRoom(room.id)} title="Delete room">×</button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
