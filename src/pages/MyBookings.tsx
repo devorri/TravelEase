@@ -24,16 +24,12 @@ const MyBookings: React.FC = () => {
   const { user } = useAuth();
   const { notify } = useNotification();
 
-  useEffect(() => {
-    if (user) fetchBookings();
-  }, [user]);
+  useEffect(() => { if (user) fetchBookings(); }, [user]);
 
   const fetchBookings = async () => {
     setLoading(true);
     const { data } = await supabase
-      .from('bookings')
-      .select('*')
-      .eq('user_id', user?.id)
+      .from('bookings').select('*').eq('user_id', user?.id)
       .order('created_at', { ascending: false });
     if (data) setBookings(data);
     setLoading(false);
@@ -56,10 +52,7 @@ const MyBookings: React.FC = () => {
 
   if (!user) return <Navigate to="/login" />;
 
-  const filteredBookings = bookings.filter(b => 
-    filterType === 'all' || b.type === filterType
-  );
-
+  const filteredBookings = bookings.filter(b => filterType === 'all' || b.type === filterType);
   const activeBookings = filteredBookings.filter(b => b.status !== 'cancelled');
   const pastBookings = filteredBookings.filter(b => b.status === 'cancelled');
 
@@ -92,16 +85,13 @@ const MyBookings: React.FC = () => {
             <h3>Filter Bookings</h3>
             <div className="filter-group">
               <label className={filterType === 'all' ? 'active' : ''}>
-                <input type="radio" name="filter" checked={filterType === 'all'} onChange={() => setFilterType('all')} /> 
-                All Bookings
+                <input type="radio" name="filter" checked={filterType === 'all'} onChange={() => setFilterType('all')} /> All Bookings
               </label>
               <label className={filterType === 'flight' ? 'active' : ''}>
-                <input type="radio" name="filter" checked={filterType === 'flight'} onChange={() => setFilterType('flight')} /> 
-                Flights
+                <input type="radio" name="filter" checked={filterType === 'flight'} onChange={() => setFilterType('flight')} /> Flights
               </label>
               <label className={filterType === 'hotel' ? 'active' : ''}>
-                <input type="radio" name="filter" checked={filterType === 'hotel'} onChange={() => setFilterType('hotel')} /> 
-                Hotels
+                <input type="radio" name="filter" checked={filterType === 'hotel'} onChange={() => setFilterType('hotel')} /> Hotels
               </label>
             </div>
             <hr />
@@ -141,48 +131,33 @@ const MyBookings: React.FC = () => {
                 {filteredBookings.map(booking => (
                   <div key={booking.id} className={`booking-card-modern glass ${booking.status === 'cancelled' ? 'cancelled' : ''}`}>
                     <div className="card-top">
-                      <div className="type-tag">
-                        {booking.type === 'hotel' ? '🏨 Hotel Stay' : '✈️ Flight'}
-                      </div>
-                      <div className={`status-pill ${booking.status}`}>
-                        {booking.status.toUpperCase()}
-                      </div>
+                      <div className="type-tag">{booking.type === 'hotel' ? '🏨 Hotel Stay' : '✈️ Flight'}</div>
+                      <div className={`status-pill ${booking.status}`}>{booking.status.toUpperCase()}</div>
                     </div>
-
                     <div className="card-body">
                       <div className="card-main-info">
                         <h3 className="booking-title">
-                          {booking.type === 'flight' 
+                          {booking.type === 'flight'
                             ? `${booking.details?.origin || ''} to ${booking.details?.destination || ''}`
                             : booking.details?.hotel_name || 'Accommodation'}
                         </h3>
-                        <div className="booking-ref-tag">
-                          Ref: <span>{booking.booking_reference || booking.details?.booking_reference || 'N/A'}</span>
-                        </div>
+                        <div className="booking-ref-tag">Ref: <span>{booking.booking_reference || booking.details?.booking_reference || 'N/A'}</span></div>
                       </div>
-
                       <div className="info-grid">
                         <div className="info-cell">
                           <label>Date</label>
                           <strong>{booking.details?.travel_date || booking.details?.check_in || new Date(booking.created_at).toLocaleDateString()}</strong>
                         </div>
                         {booking.type === 'flight' ? (
-                          <div className="info-cell">
-                            <label>Flight No.</label>
-                            <strong>{booking.details?.flight_number || 'TE-000'}</strong>
-                          </div>
+                          <div className="info-cell"><label>Flight No.</label><strong>{booking.details?.flight_number || 'TE-000'}</strong></div>
                         ) : (
-                          <div className="info-cell">
-                            <label>Room</label>
-                            <strong>{booking.details?.room_number || 'N/A'}</strong>
-                          </div>
+                          <div className="info-cell"><label>Room Type</label><strong>{booking.details?.room_type || 'Standard Room'}</strong></div>
                         )}
                         <div className="info-cell">
                           <label>Total Price</label>
                           <strong className="price-text">₱{(booking.details?.total_amount || booking.details?.price || 0).toLocaleString()}</strong>
                         </div>
                       </div>
-
                       {expandedId === booking.id && (
                         <div className="card-expanded-content animate-slide-down">
                           <hr />
@@ -190,7 +165,7 @@ const MyBookings: React.FC = () => {
                             {booking.type === 'hotel' ? (
                               <>
                                 <div className="sub-item"><label>Check-out</label><span>{booking.details?.check_out}</span></div>
-                                <div className="sub-item"><label>Building</label><span>{booking.details?.building || 'A'}</span></div>
+                                <div className="sub-item"><label>Room #</label><span>{booking.details?.room_number || 'N/A'}</span></div>
                                 <div className="sub-item"><label>Guests</label><span>{booking.details?.pax} Pax</span></div>
                               </>
                             ) : (
@@ -204,7 +179,6 @@ const MyBookings: React.FC = () => {
                         </div>
                       )}
                     </div>
-
                     <div className="card-footer">
                       <button className="btn-text" onClick={() => setExpandedId(expandedId === booking.id ? null : booking.id)}>
                         {expandedId === booking.id ? 'Show Less' : 'View Full Details'}
@@ -212,12 +186,8 @@ const MyBookings: React.FC = () => {
                       <div className="footer-actions">
                         {booking.status !== 'cancelled' && (
                           <>
-                            <button className="btn-icon-label" onClick={() => setSelectedReceipt(booking)}>
-                              <span>📄</span> Receipt
-                            </button>
-                            <button className="btn-icon-label danger" onClick={() => handleCancel(booking.id)}>
-                              <span>✕</span> Cancel
-                            </button>
+                            <button className="btn-icon-label" onClick={() => setSelectedReceipt(booking)}><span>📄</span> Receipt</button>
+                            <button className="btn-icon-label danger" onClick={() => handleCancel(booking.id)}><span>✕</span> Cancel</button>
                           </>
                         )}
                       </div>
@@ -230,11 +200,11 @@ const MyBookings: React.FC = () => {
         </div>
       </div>
 
-      {/* Receipt Modal */}
+      {/* Receipt Modal — fixed for printing */}
       {selectedReceipt && (
-        <div className="modal-overlay no-print">
-          <div className="receipt-modal glass animate-fade-in">
-            <button className="close-btn" onClick={() => setSelectedReceipt(null)}>×</button>
+        <div className="modal-overlay receipt-overlay">
+          <div className="receipt-modal glass animate-fade-in" id="printable-receipt">
+            <button className="close-btn no-print" onClick={() => setSelectedReceipt(null)}>×</button>
             <div className="receipt-header">
               <span className="receipt-logo">🌴</span>
               <h2 className="receipt-title">TravelEase Receipt</h2>
@@ -260,11 +230,47 @@ const MyBookings: React.FC = () => {
               <div className="receipt-row">
                 <span className="receipt-label">Details</span>
                 <span className="receipt-value">
-                  {selectedReceipt.type === 'flight' 
+                  {selectedReceipt.type === 'flight'
                     ? `${selectedReceipt.details.origin} to ${selectedReceipt.details.destination} (${selectedReceipt.details.flight_number})`
-                    : `${selectedReceipt.details.hotel_name} - Room ${selectedReceipt.details.room_number}`}
+                    : `${selectedReceipt.details.hotel_name} - ${selectedReceipt.details.room_type || 'Room'} ${selectedReceipt.details.room_number}`}
                 </span>
               </div>
+              {selectedReceipt.type === 'hotel' && (
+                <>
+                  <div className="receipt-row">
+                    <span className="receipt-label">Check-in</span>
+                    <span className="receipt-value">{selectedReceipt.details.check_in}</span>
+                  </div>
+                  <div className="receipt-row">
+                    <span className="receipt-label">Check-out</span>
+                    <span className="receipt-value">{selectedReceipt.details.check_out}</span>
+                  </div>
+                  <div className="receipt-row">
+                    <span className="receipt-label">Guests</span>
+                    <span className="receipt-value">{selectedReceipt.details.pax} Pax</span>
+                  </div>
+                </>
+              )}
+              {selectedReceipt.type === 'flight' && (
+                <>
+                  <div className="receipt-row">
+                    <span className="receipt-label">Travel Date</span>
+                    <span className="receipt-value">{selectedReceipt.details.travel_date}</span>
+                  </div>
+                  <div className="receipt-row">
+                    <span className="receipt-label">Fare Type</span>
+                    <span className="receipt-value">{selectedReceipt.details.fare_type}</span>
+                  </div>
+                  <div className="receipt-row">
+                    <span className="receipt-label">Passengers</span>
+                    <span className="receipt-value">{selectedReceipt.details.pax}</span>
+                  </div>
+                  <div className="receipt-row">
+                    <span className="receipt-label">Seat</span>
+                    <span className="receipt-value">{selectedReceipt.details.seat_number || 'Auto-assigned'}</span>
+                  </div>
+                </>
+              )}
               <div className="receipt-row total-row">
                 <span className="receipt-label">Total Amount</span>
                 <span className="receipt-value">₱{(selectedReceipt.details.total_amount || selectedReceipt.details.price).toLocaleString()}</span>
@@ -274,7 +280,7 @@ const MyBookings: React.FC = () => {
               <p>Thank you for choosing TravelEase Palawan!</p>
               <p>This is a computer-generated receipt.</p>
             </div>
-            <button className="btn-primary btn-print" onClick={handlePrint}>Print Receipt</button>
+            <button className="btn-primary btn-print no-print" onClick={handlePrint}>Print Receipt</button>
           </div>
         </div>
       )}

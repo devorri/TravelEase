@@ -2,84 +2,77 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase.ts';
 import { useAuth } from '../context/AuthContext.tsx';
 
+type PanelType = 'dashboard' | 'destinations' | 'hotels' | 'flights' | 'transportation' | 'hotel-bookings' | 'flight-bookings' | 'feedback';
+
 const Admin: React.FC = () => {
-  const [activePanel, setActivePanel] = useState<'dashboard' | 'destinations' | 'hotels' | 'flights' | 'transportation' | 'bookings' | 'feedback'>('dashboard');
+  const [activePanel, setActivePanel] = useState<PanelType>('dashboard');
   const [data, setData] = useState<any[]>([]);
   const [counts, setCounts] = useState({
-    destinations: 0,
-    hotels: 0,
-    flights: 0,
-    transportation: 0,
-    bookings: 0,
-    feedback: 0
+    destinations: 0, hotels: 0, flights: 0, transportation: 0, hotelBookings: 0, flightBookings: 0, feedback: 0
   });
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState<any>({});
+  const [uploading, setUploading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
   const { logout } = useAuth();
 
-  useEffect(() => {
-    fetchCounts();
-  }, []);
+  useEffect(() => { fetchCounts(); }, []);
+  useEffect(() => { if (activePanel !== 'dashboard') fetchTableData(); }, [activePanel]);
 
-  useEffect(() => {
-    if (activePanel !== 'dashboard') {
-      fetchTableData();
-    }
-  }, [activePanel]);
+  const isBookingPanel = activePanel === 'hotel-bookings' || activePanel === 'flight-bookings';
 
   const fetchCounts = async () => {
-    const [d, h, f, t, b, r] = await Promise.all([
+    const [d, h, f, t, bh, bf, r] = await Promise.all([
       supabase.from('destinations').select('*', { count: 'exact', head: true }),
       supabase.from('hotels').select('*', { count: 'exact', head: true }),
       supabase.from('flights').select('*', { count: 'exact', head: true }),
       supabase.from('transportation').select('*', { count: 'exact', head: true }),
-      supabase.from('bookings').select('*', { count: 'exact', head: true }),
+      supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('type', 'hotel'),
+      supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('type', 'flight'),
       supabase.from('reviews').select('*', { count: 'exact', head: true })
     ]);
-
     setCounts({
-      destinations: d.count || 0,
-      hotels: h.count || 0,
-      flights: f.count || 0,
-      transportation: t.count || 0,
-      bookings: b.count || 0,
-      feedback: r.count || 0
+      destinations: d.count || 0, hotels: h.count || 0, flights: f.count || 0,
+      transportation: t.count || 0, hotelBookings: bh.count || 0, flightBookings: bf.count || 0, feedback: r.count || 0
     });
   };
 
   const fetchTableData = async () => {
     setLoading(true);
-    const table = activePanel === 'feedback' ? 'reviews' : activePanel;
-    const { data } = await supabase.from(table).select('*');
-    if (data) setData(data);
+    if (activePanel === 'hotel-bookings') {
+      const { data: result } = await supabase.from('bookings').select('*').eq('type', 'hotel').order('created_at', { ascending: false });
+      if (result) setData(result);
+    } else if (activePanel === 'flight-bookings') {
+      const { data: result } = await supabase.from('bookings').select('*').eq('type', 'flight').order('created_at', { ascending: false });
+      if (result) setData(result);
+    } else {
+      const table = activePanel === 'feedback' ? 'reviews' : activePanel;
+      const { data: result } = await supabase.from(table).select('*').order('created_at', { ascending: false });
+      if (result) setData(result);
+    }
     setLoading(false);
   };
 
-  const [uploading, setUploading] = useState(false);
-
+  /* ── Image Upload (multiple) ── */
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      // Upload to the bucket matching the active panel name
-      const { error: uploadError } = await supabase.storage
-        .from(activePanel)
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from(activePanel)
-        .getPublicUrl(filePath);
-
-      setFormData({ ...formData, image_url: publicUrl });
+      const currentImages: string[] = formData.images || [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage.from(activePanel).upload(fileName, file);
+        if (uploadError) throw uploadError;
+        const { data: { publicUrl } } = supabase.storage.from(activePanel).getPublicUrl(fileName);
+        currentImages.push(publicUrl);
+      }
+      // First image is always the cover
+      setFormData({ ...formData, images: currentImages, image_url: currentImages[0] });
     } catch (error: any) {
       alert('Error uploading image: ' + error.message);
     } finally {
@@ -87,15 +80,20 @@ const Admin: React.FC = () => {
     }
   };
 
+  const removeImage = (idx: number) => {
+    const imgs = [...(formData.images || [])];
+    imgs.splice(idx, 1);
+    setFormData({ ...formData, images: imgs, image_url: imgs[0] || '' });
+  };
+
+  /* ── Save ── */
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const table = activePanel === 'feedback' ? 'reviews' : activePanel;
     const { id, ...payload } = formData;
-    
     if (activePanel === 'hotels' && typeof payload.amenities === 'string') {
       payload.amenities = payload.amenities.split(',').map((s: string) => s.trim());
     }
-
     if (id) {
       await supabase.from(table).update(payload).eq('id', id);
     } else {
@@ -116,14 +114,337 @@ const Admin: React.FC = () => {
   };
 
   const openModal = (item: any = {}) => {
-    setFormData(item);
+    // Ensure images array exists
+    const images = item.images || (item.image_url ? [item.image_url] : []);
+    setFormData({ ...item, images });
     setShowModal(true);
   };
 
+  /* ── Panel-specific form fields ── */
+  const renderFormFields = () => {
+    switch (activePanel) {
+      case 'destinations':
+        return (
+          <>
+            <div className="form-row full"><div className="form-group">
+              <label>Destination Name</label>
+              <input type="text" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} required />
+            </div></div>
+            <div className="form-row"><div className="form-group">
+              <label>Location</label>
+              <input type="text" value={formData.location || ''} onChange={e => setFormData({...formData, location: e.target.value})} />
+            </div><div className="form-group">
+              <label>Category</label>
+              <select value={formData.category || ''} onChange={e => setFormData({...formData, category: e.target.value})}>
+                <option value="">Select</option>
+                {['Island','Beach','Diving','Cave','Lagoon','Wildlife','Cultural','Adventure'].map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div></div>
+            <div className="form-row full"><div className="form-group">
+              <label>Description</label>
+              <textarea rows={3} value={formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} />
+            </div></div>
+          </>
+        );
+      case 'hotels':
+        return (
+          <>
+            <div className="form-row full"><div className="form-group">
+              <label>Hotel Name</label>
+              <input type="text" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} required />
+            </div></div>
+            <div className="form-row"><div className="form-group">
+              <label>Address</label>
+              <input type="text" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} />
+            </div><div className="form-group">
+              <label>Area</label>
+              <input type="text" value={formData.area || ''} onChange={e => setFormData({...formData, area: e.target.value})} placeholder="e.g. El Nido" />
+            </div></div>
+            <div className="form-row"><div className="form-group">
+              <label>Price Per Night (₱)</label>
+              <input type="number" value={formData.price_per_night || ''} onChange={e => setFormData({...formData, price_per_night: e.target.value})} />
+            </div><div className="form-group">
+              <label>Stars</label>
+              <select value={formData.stars || 3} onChange={e => setFormData({...formData, stars: parseInt(e.target.value)})}>
+                {[1,2,3,4,5].map(n => <option key={n} value={n}>{n} Star{n>1?'s':''}</option>)}
+              </select>
+            </div></div>
+            <div className="form-row full"><div className="form-group">
+              <label>Amenities (comma-separated)</label>
+              <input type="text" value={Array.isArray(formData.amenities) ? formData.amenities.join(', ') : (formData.amenities || '')} onChange={e => setFormData({...formData, amenities: e.target.value})} placeholder="WiFi, Pool, Spa" />
+            </div></div>
+            <div className="form-row full"><div className="form-group">
+              <label>Description</label>
+              <textarea rows={3} value={formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} />
+            </div></div>
+          </>
+        );
+      case 'flights':
+        return (
+          <>
+            <div className="form-row"><div className="form-group">
+              <label>Airline</label>
+              <input type="text" value={formData.airline || ''} onChange={e => setFormData({...formData, airline: e.target.value})} required />
+            </div><div className="form-group">
+              <label>Flight Number</label>
+              <input type="text" value={formData.flight_number || ''} onChange={e => setFormData({...formData, flight_number: e.target.value})} placeholder="TE-101" />
+            </div></div>
+            <div className="form-row"><div className="form-group">
+              <label>Origin</label>
+              <input type="text" value={formData.origin || ''} onChange={e => setFormData({...formData, origin: e.target.value})} />
+            </div><div className="form-group">
+              <label>Destination</label>
+              <input type="text" value={formData.destination || ''} onChange={e => setFormData({...formData, destination: e.target.value})} />
+            </div></div>
+            <div className="form-row"><div className="form-group">
+              <label>Departure Time</label>
+              <input type="text" value={formData.departure_time || ''} onChange={e => setFormData({...formData, departure_time: e.target.value})} placeholder="08:00" />
+            </div><div className="form-group">
+              <label>Arrival Time</label>
+              <input type="text" value={formData.arrival_time || ''} onChange={e => setFormData({...formData, arrival_time: e.target.value})} placeholder="09:15" />
+            </div></div>
+            <div className="form-row"><div className="form-group">
+              <label>Base Price (₱)</label>
+              <input type="number" value={formData.price || ''} onChange={e => setFormData({...formData, price: e.target.value})} />
+            </div><div className="form-group">
+              <label>Duration (min)</label>
+              <input type="number" value={formData.duration_minutes || ''} onChange={e => setFormData({...formData, duration_minutes: e.target.value})} />
+            </div></div>
+          </>
+        );
+      case 'transportation':
+        return (
+          <>
+            <div className="form-row full"><div className="form-group">
+              <label>Transport Type</label>
+              <input type="text" value={formData.type || ''} onChange={e => setFormData({...formData, type: e.target.value})} required placeholder="e.g. Van, Tricycle" />
+            </div></div>
+            <div className="form-row"><div className="form-group">
+              <label>Route</label>
+              <input type="text" value={formData.route || ''} onChange={e => setFormData({...formData, route: e.target.value})} />
+            </div><div className="form-group">
+              <label>Fare (₱)</label>
+              <input type="number" value={formData.fare || ''} onChange={e => setFormData({...formData, fare: e.target.value})} />
+            </div></div>
+            <div className="form-row full"><div className="form-group">
+              <label>Description</label>
+              <textarea rows={3} value={formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} />
+            </div></div>
+          </>
+        );
+      default: return null;
+    }
+  };
+
+  /* ── Table columns per panel ── */
+  const getTableHeaders = () => {
+    switch (activePanel) {
+      case 'destinations': return ['Image', 'Name', 'Location', 'Category', 'Actions'];
+      case 'hotels': return ['Image', 'Name', 'Area', 'Price/Night', 'Stars', 'Actions'];
+      case 'flights': return ['Airline', 'Flight #', 'Route', 'Price', 'Actions'];
+      case 'transportation': return ['Image', 'Type', 'Route', 'Fare', 'Actions'];
+      case 'feedback': return ['User', 'Rating', 'Comment', 'Date', 'Actions'];
+      default: return [];
+    }
+  };
+
+  const renderTableRow = (item: any) => {
+    switch (activePanel) {
+      case 'destinations':
+        return (<>
+          <td>{item.image_url ? <img src={item.image_url} alt="" className="admin-thumb" /> : <div className="admin-thumb-placeholder">No Image</div>}</td>
+          <td className="td-bold">{item.name}</td>
+          <td>{item.location || 'N/A'}</td>
+          <td><span className="cell-badge">{item.category}</span></td>
+        </>);
+      case 'hotels':
+        return (<>
+          <td>{item.image_url ? <img src={item.image_url} alt="" className="admin-thumb" /> : <div className="admin-thumb-placeholder">No Image</div>}</td>
+          <td className="td-bold">{item.name}</td>
+          <td>{item.area || 'N/A'}</td>
+          <td>₱{Number(item.price_per_night || 0).toLocaleString()}</td>
+          <td><span style={{color:'#fbbf24'}}>{'★'.repeat(item.stars || 0)}</span></td>
+        </>);
+      case 'flights':
+        return (<>
+          <td className="td-bold">{item.airline}</td>
+          <td>{item.flight_number || '—'}</td>
+          <td>{item.origin} → {item.destination}</td>
+          <td>₱{Number(item.price || 0).toLocaleString()}</td>
+        </>);
+      case 'transportation':
+        return (<>
+          <td>{item.image_url ? <img src={item.image_url} alt="" className="admin-thumb" /> : <div className="admin-thumb-placeholder">No Image</div>}</td>
+          <td className="td-bold">{item.type}</td>
+          <td>{item.route || 'N/A'}</td>
+          <td>₱{Number(item.fare || 0).toLocaleString()}</td>
+        </>);
+      case 'feedback':
+        return (<>
+          <td className="td-bold">{item.user_name || 'Anonymous'}</td>
+          <td><span style={{color:'#fbbf24'}}>{'★'.repeat(item.rating || 0)}</span></td>
+          <td style={{maxWidth:'300px'}}>{item.comment?.slice(0,80)}{item.comment?.length > 80 ? '...' : ''}</td>
+          <td>{item.created_at ? new Date(item.created_at).toLocaleDateString() : '—'}</td>
+        </>);
+      default: return null;
+    }
+  };
+
+  /* ── Hotel Bookings Panel ── */
+  const renderHotelBookingsPanel = () => (
+    <div className="panel animate-fade-in">
+      <div className="admin-header">
+        <div>
+          <p className="panel-eyebrow">Records</p>
+          <h2 className="panel-title">🏨 Hotel Bookings</h2>
+        </div>
+      </div>
+      {loading ? <p>Loading hotel bookings...</p> : data.length === 0 ? (
+        <div className="admin-empty-state">
+          <span>🏨</span>
+          <h3>No hotel bookings yet</h3>
+          <p>When travelers reserve hotel rooms, they'll appear here.</p>
+        </div>
+      ) : (
+        <div className="admin-bookings-list">
+          {data.map(booking => {
+            const d = booking.details || {};
+            const isExpanded = expandedBookingId === booking.id;
+            return (
+              <div key={booking.id} className={`admin-booking-card ${booking.status === 'cancelled' ? 'cancelled' : ''}`}>
+                <div className="ab-top">
+                  <div className="ab-type">🏨 Hotel</div>
+                  <div className={`ab-status ${booking.status || 'confirmed'}`}>{(booking.status || 'confirmed').toUpperCase()}</div>
+                </div>
+                <div className="ab-body">
+                  <div className="ab-main">
+                    <h3>{d.hotel_name || 'Hotel Booking'}</h3>
+                    <div className="ab-ref">Ref: <strong>{booking.booking_reference || d.booking_reference || 'N/A'}</strong></div>
+                  </div>
+                  <div className="ab-grid">
+                    <div className="ab-cell"><label>Room</label><span>{d.room_type || 'Standard'} — #{d.room_number || 'N/A'}</span></div>
+                    <div className="ab-cell"><label>Check-in</label><span>{d.check_in || '—'}</span></div>
+                    <div className="ab-cell"><label>Check-out</label><span>{d.check_out || '—'}</span></div>
+                    <div className="ab-cell"><label>Guests</label><span>{d.pax || 1}</span></div>
+                    <div className="ab-cell"><label>Amount</label><span className="ab-amount">₱{(d.total_amount || d.price || 0).toLocaleString()}</span></div>
+                  </div>
+                  {isExpanded && (
+                    <div className="ab-expanded">
+                      <hr />
+                      <div className="ab-detail-grid">
+                        <div><label>Hotel</label><span>{d.hotel_name}</span></div>
+                        <div><label>Room Type</label><span>{d.room_type || d.building || 'N/A'}</span></div>
+                        <div><label>Room #</label><span>{d.room_number}</span></div>
+                        <div><label>Max Guests</label><span>{d.max_guests || '—'}</span></div>
+                        <div><label>Check-in</label><span>{d.check_in}</span></div>
+                        <div><label>Check-out</label><span>{d.check_out}</span></div>
+                        <div><label>Guests</label><span>{d.pax}</span></div>
+                        <div><label>Price/Night</label><span>₱{(d.price || 0).toLocaleString()}</span></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="ab-footer">
+                  <button className="btn-text" onClick={() => setExpandedBookingId(isExpanded ? null : booking.id)}>
+                    {isExpanded ? 'Show Less' : 'View Full Details'}
+                  </button>
+                  <span className="ab-date">Booked: {booking.created_at ? new Date(booking.created_at).toLocaleDateString() : '—'}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
+  /* ── Flight Bookings Panel ── */
+  const renderFlightBookingsPanel = () => (
+    <div className="panel animate-fade-in">
+      <div className="admin-header">
+        <div>
+          <p className="panel-eyebrow">Records</p>
+          <h2 className="panel-title">✈️ Flight Bookings</h2>
+        </div>
+      </div>
+      {loading ? <p>Loading flight bookings...</p> : data.length === 0 ? (
+        <div className="admin-empty-state">
+          <span>✈️</span>
+          <h3>No flight bookings yet</h3>
+          <p>When travelers book flights, they'll appear here.</p>
+        </div>
+      ) : (
+        <div className="admin-bookings-list">
+          {data.map(booking => {
+            const d = booking.details || {};
+            const isExpanded = expandedBookingId === booking.id;
+            return (
+              <div key={booking.id} className={`admin-booking-card ${booking.status === 'cancelled' ? 'cancelled' : ''}`}>
+                <div className="ab-top">
+                  <div className="ab-type">✈️ Flight</div>
+                  <div className={`ab-status ${booking.status || 'confirmed'}`}>{(booking.status || 'confirmed').toUpperCase()}</div>
+                </div>
+                <div className="ab-body">
+                  <div className="ab-main">
+                    <h3>{d.origin || ''} → {d.destination || ''}</h3>
+                    <div className="ab-ref">Ref: <strong>{booking.booking_reference || d.booking_reference || 'N/A'}</strong></div>
+                  </div>
+                  <div className="ab-grid">
+                    <div className="ab-cell"><label>Passenger</label><span>{d.passengers?.[0] ? `${d.passengers[0].firstName} ${d.passengers[0].lastName}` : 'N/A'}</span></div>
+                    <div className="ab-cell"><label>Flight</label><span>{d.flight_number || '—'}</span></div>
+                    <div className="ab-cell"><label>Fare</label><span>{d.fare_type || 'Basic'}</span></div>
+                    <div className="ab-cell"><label>Travel Date</label><span>{d.travel_date || '—'}</span></div>
+                    <div className="ab-cell"><label>Amount</label><span className="ab-amount">₱{(d.total_amount || 0).toLocaleString()}</span></div>
+                  </div>
+                  {isExpanded && (
+                    <div className="ab-expanded">
+                      <hr />
+                      <div className="ab-detail-grid">
+                        <div><label>Airline</label><span>{d.airline}</span></div>
+                        <div><label>Flight #</label><span>{d.flight_number}</span></div>
+                        <div><label>Route</label><span>{d.origin} → {d.destination}</span></div>
+                        <div><label>Departure</label><span>{d.departure_time}</span></div>
+                        <div><label>Arrival</label><span>{d.arrival_time}</span></div>
+                        <div><label>Fare Type</label><span>{d.fare_type}</span></div>
+                        <div><label>Base Fare</label><span>₱{(d.base_fare || 0).toLocaleString()}</span></div>
+                        <div><label>Passengers</label><span>{d.pax}</span></div>
+                        <div><label>Seat</label><span>{d.seat_number || 'Auto'}</span></div>
+                        <div><label>Baggage</label><span>{d.baggage_kg}kg (+₱{(d.baggage_fee || 0).toLocaleString()})</span></div>
+                        <div><label>Meal</label><span>{d.meal_selection || 'None'} (+₱{(d.meal_fee || 0).toLocaleString()})</span></div>
+                        <div><label>Insurance</label><span>{d.insurance ? `Yes (+₱${(d.insurance_fee || 0).toLocaleString()})` : 'No'}</span></div>
+                      </div>
+                      {d.passengers && d.passengers.length > 0 && (
+                        <div className="ab-passengers">
+                          <label>Passenger List</label>
+                          {d.passengers.map((p: any, i: number) => (
+                            <div key={i} className="ab-pax-row">{p.title} {p.firstName} {p.lastName} {p.nationality ? `(${p.nationality})` : ''}</div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="ab-footer">
+                  <button className="btn-text" onClick={() => setExpandedBookingId(isExpanded ? null : booking.id)}>
+                    {isExpanded ? 'Show Less' : 'View Full Details'}
+                  </button>
+                  <span className="ab-date">Booked: {booking.created_at ? new Date(booking.created_at).toLocaleDateString() : '—'}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="admin-layout animate-fade-in">
+      {/* Mobile overlay */}
+      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
+
       {/* Sidebar */}
-      <aside className="sidebar">
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-brand">
           <span className="brand-icon">✦</span>
           <div>
@@ -131,50 +452,48 @@ const Admin: React.FC = () => {
             <div className="brand-sub">Admin Portal</div>
           </div>
         </div>
-
         <nav className="sidebar-nav">
           <div className="nav-section-label">Overview</div>
-          <button className={`sidebar-link ${activePanel === 'dashboard' ? 'active' : ''}`} onClick={() => setActivePanel('dashboard')}>
+          <button className={`sidebar-link ${activePanel === 'dashboard' ? 'active' : ''}`} onClick={() => { setActivePanel('dashboard'); setSidebarOpen(false); }}>
             <span className="nav-icon">◈</span> Dashboard
           </button>
-
           <div className="nav-section-label">Manage</div>
-          <button className={`sidebar-link ${activePanel === 'destinations' ? 'active' : ''}`} onClick={() => setActivePanel('destinations')}>
-            <span className="nav-icon">🏝</span> Destinations
+          {(['destinations','hotels','flights','transportation'] as PanelType[]).map(p => (
+            <button key={p} className={`sidebar-link ${activePanel === p ? 'active' : ''}`} onClick={() => { setActivePanel(p); setSidebarOpen(false); }}>
+              <span className="nav-icon">{p === 'destinations' ? '🏝' : p === 'hotels' ? '🏨' : p === 'flights' ? '✈' : '🚐'}</span> {p.charAt(0).toUpperCase() + p.slice(1)}
+            </button>
+          ))}
+          <div className="nav-section-label">Bookings</div>
+          <button className={`sidebar-link ${activePanel === 'hotel-bookings' ? 'active' : ''}`} onClick={() => { setActivePanel('hotel-bookings'); setSidebarOpen(false); }}>
+            <span className="nav-icon">🏨</span> Hotel Bookings
+            {counts.hotelBookings > 0 && <span className="nav-badge">{counts.hotelBookings}</span>}
           </button>
-          <button className={`sidebar-link ${activePanel === 'hotels' ? 'active' : ''}`} onClick={() => setActivePanel('hotels')}>
-            <span className="nav-icon">🏨</span> Hotels
+          <button className={`sidebar-link ${activePanel === 'flight-bookings' ? 'active' : ''}`} onClick={() => { setActivePanel('flight-bookings'); setSidebarOpen(false); }}>
+            <span className="nav-icon">✈️</span> Flight Bookings
+            {counts.flightBookings > 0 && <span className="nav-badge">{counts.flightBookings}</span>}
           </button>
-          <button className={`sidebar-link ${activePanel === 'flights' ? 'active' : ''}`} onClick={() => setActivePanel('flights')}>
-            <span className="nav-icon">✈</span> Flights
-          </button>
-          <button className={`sidebar-link ${activePanel === 'transportation' ? 'active' : ''}`} onClick={() => setActivePanel('transportation')}>
-            <span className="nav-icon">🚐</span> Transport
-          </button>
-
           <div className="nav-section-label">Records</div>
-          <button className={`sidebar-link ${activePanel === 'bookings' ? 'active' : ''}`} onClick={() => setActivePanel('bookings')}>
-            <span className="nav-icon">📋</span> Bookings
-          </button>
-          <button className={`sidebar-link ${activePanel === 'feedback' ? 'active' : ''}`} onClick={() => setActivePanel('feedback')}>
+          <button className={`sidebar-link ${activePanel === 'feedback' ? 'active' : ''}`} onClick={() => { setActivePanel('feedback'); setSidebarOpen(false); }}>
             <span className="nav-icon">💬</span> Feedback
           </button>
         </nav>
-
         <div className="sidebar-footer">
-          <button className="logout-btn-admin" onClick={logout}>
-            <span>⏻</span> Logout
-          </button>
+          <button className="logout-btn-admin" onClick={logout}><span>⏻</span> Logout</button>
         </div>
       </aside>
 
       {/* Main Content */}
       <div className="main-wrapper">
         <header className="topbar">
-          <div className="page-breadcrumb">
-            <span className="breadcrumb-root">TravelEase</span>
-            <span className="breadcrumb-sep">›</span>
-            <span className="breadcrumb-current">{activePanel.charAt(0).toUpperCase() + activePanel.slice(1)}</span>
+          <div className="topbar-left">
+            <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
+              <span /><span /><span />
+            </button>
+            <div className="page-breadcrumb">
+              <span className="breadcrumb-root">TravelEase</span>
+              <span className="breadcrumb-sep">›</span>
+              <span className="breadcrumb-current">{activePanel.charAt(0).toUpperCase() + activePanel.slice(1)}</span>
+            </div>
           </div>
           <div className="topbar-right">
             <div className="topbar-stat"><span className="ts-dot green"></span> System Online</div>
@@ -184,84 +503,50 @@ const Admin: React.FC = () => {
         <main className="content-area">
           {activePanel === 'dashboard' ? (
             <div className="panel animate-fade-in">
-              <div className="panel-header">
-                <div>
-                  <p className="panel-eyebrow">Overview</p>
-                  <h2 className="panel-title">System Dashboard</h2>
-                </div>
-              </div>
-
+              <div className="panel-header"><div>
+                <p className="panel-eyebrow">Overview</p>
+                <h2 className="panel-title">System Dashboard</h2>
+              </div></div>
               <div className="kpi-grid">
-                <div className="kpi-card">
-                  <div className="kpi-icon teal">🏝</div>
-                  <div className="kpi-info">
-                    <div className="kpi-label">Destinations</div>
-                    <div className="kpi-value">{counts.destinations}</div>
+                {[
+                  { icon: '🏝', label: 'Destinations', value: counts.destinations, color: 'teal' },
+                  { icon: '🏨', label: 'Hotels', value: counts.hotels, color: 'gold' },
+                  { icon: '✈', label: 'Flights', value: counts.flights, color: 'dark' },
+                  { icon: '🏨', label: 'Hotel Bookings', value: counts.hotelBookings, color: 'gold' },
+                  { icon: '✈️', label: 'Flight Bookings', value: counts.flightBookings, color: 'teal' },
+                ].map(k => (
+                  <div key={k.label} className="kpi-card">
+                    <div className={`kpi-icon ${k.color}`}>{k.icon}</div>
+                    <div className="kpi-info">
+                      <div className="kpi-label">{k.label}</div>
+                      <div className="kpi-value">{k.value}</div>
+                    </div>
                   </div>
-                </div>
-                <div className="kpi-card">
-                  <div className="kpi-icon gold">🏨</div>
-                  <div className="kpi-info">
-                    <div className="kpi-label">Hotels</div>
-                    <div className="kpi-value">{counts.hotels}</div>
-                  </div>
-                </div>
-                <div className="kpi-card">
-                  <div className="kpi-icon dark">✈</div>
-                  <div className="kpi-info">
-                    <div className="kpi-label">Flights</div>
-                    <div className="kpi-value">{counts.flights}</div>
-                  </div>
-                </div>
-                <div className="kpi-card">
-                  <div className="kpi-icon teal">📋</div>
-                  <div className="kpi-info">
-                    <div className="kpi-label">Bookings</div>
-                    <div className="kpi-value">{counts.bookings}</div>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
-          ) : (
+          ) : activePanel === 'hotel-bookings' ? renderHotelBookingsPanel() : activePanel === 'flight-bookings' ? renderFlightBookingsPanel() : (
             <div className="panel animate-fade-in">
               <div className="admin-header">
                 <div>
                   <p className="panel-eyebrow">Manage</p>
                   <h2 className="panel-title">{activePanel.charAt(0).toUpperCase() + activePanel.slice(1)}</h2>
                 </div>
-                {activePanel !== 'bookings' && activePanel !== 'feedback' && (
+                {activePanel !== 'feedback' && (
                   <button className="btn-add" onClick={() => openModal()}>+ Add New</button>
                 )}
               </div>
-
               <div className="admin-table-container">
                 {loading ? <p>Loading records...</p> : (
                   <table className="admin-table">
-                    <thead>
-                      <tr>
-                        <th>Preview</th>
-                        <th>Identifier</th>
-                        <th>Details</th>
-                        <th>Info</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
+                    <thead><tr>{getTableHeaders().map(h => <th key={h}>{h}</th>)}</tr></thead>
                     <tbody>
                       {data.map(item => (
                         <tr key={item.id}>
-                          <td>
-                            {item.image_url ? (
-                              <img src={item.image_url} alt="" className="admin-thumb" />
-                            ) : (
-                              <div className="admin-thumb-placeholder">No Image</div>
-                            )}
-                          </td>
-                          <td>{item.name || item.airline || item.type || item.user_name || item.id.slice(0,8)}</td>
-                          <td>{item.location || item.address || item.route || item.comment || 'N/A'}</td>
-                          <td>{item.price || item.fare || item.rating || item.status || '-'}</td>
+                          {renderTableRow(item)}
                           <td>
                             <div className="tbl-actions">
-                              <button className="btn-edit" onClick={() => openModal(item)}>Edit</button>
+                              {activePanel !== 'feedback' && <button className="btn-edit" onClick={() => openModal(item)}>Edit</button>}
                               <button className="btn-delete" onClick={() => handleDelete(item.id)}>Delete</button>
                             </div>
                           </td>
@@ -276,71 +561,39 @@ const Admin: React.FC = () => {
         </main>
       </div>
 
-      {/* Shared Modal */}
+      {/* Modal — panel-specific fields */}
       {showModal && (
         <div className="modal-overlay">
           <div className="modal-box">
             <div className="modal-header">
-              <h3 className="modal-title">{formData.id ? 'Edit' : 'Add New'} {activePanel}</h3>
+              <h3 className="modal-title">{formData.id ? 'Edit' : 'Add New'} {activePanel.slice(0, -1)}</h3>
               <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
             </div>
             <form onSubmit={handleSave} className="modal-body modal-form">
+              {renderFormFields()}
+
+              {/* Multi-image upload */}
               <div className="form-row full">
                 <div className="form-group">
-                  <label>Name / Label</label>
-                  <input 
-                    type="text" 
-                    value={formData.name || formData.airline || formData.type || ''} 
-                    onChange={e => setFormData({...formData, [activePanel === 'flights' ? 'airline' : activePanel === 'transportation' ? 'type' : 'name']: e.target.value})}
-                    required 
-                  />
-                </div>
-              </div>
-              <div className="form-row full">
-                <div className="form-group">
-                  <label>Cover Image</label>
+                  <label>Images (up to 6)</label>
                   <div className="upload-wrapper">
-                    <input 
-                      type="file" 
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      disabled={uploading}
-                    />
+                    <input type="file" accept="image/*" multiple onChange={handleImageUpload} disabled={uploading || (formData.images?.length || 0) >= 6} />
                     {uploading && <span className="upload-status">Uploading...</span>}
-                    {formData.image_url && (
-                      <img src={formData.image_url} alt="Preview" className="upload-preview" />
-                    )}
                   </div>
+                  {formData.images && formData.images.length > 0 && (
+                    <div className="upload-gallery">
+                      {formData.images.map((url: string, idx: number) => (
+                        <div key={idx} className="upload-gallery-item">
+                          <img src={url} alt={`Image ${idx + 1}`} />
+                          <button type="button" className="upload-remove" onClick={() => removeImage(idx)}>×</button>
+                          {idx === 0 && <span className="upload-cover-badge">Cover</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Location / Route</label>
-                  <input 
-                    type="text" 
-                    value={formData.location || formData.address || formData.route || ''} 
-                    onChange={e => setFormData({...formData, [activePanel === 'destinations' ? 'location' : activePanel === 'hotels' ? 'address' : 'route']: e.target.value})}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Price / Fare</label>
-                  <input 
-                    type="number" 
-                    value={formData.price || formData.price_per_night || formData.fare || ''} 
-                    onChange={e => setFormData({...formData, [activePanel === 'hotels' ? 'price_per_night' : activePanel === 'flights' ? 'price' : 'fare']: e.target.value})}
-                  />
-                </div>
-              </div>
-              <div className="form-row full">
-                <div className="form-group">
-                  <label>Description</label>
-                  <textarea 
-                    rows={3}
-                    value={formData.description || ''} 
-                    onChange={e => setFormData({...formData, description: e.target.value})}
-                  />
-                </div>
-              </div>
+
               <div className="modal-actions">
                 <button type="button" className="btn-modal-cancel" onClick={() => setShowModal(false)}>Cancel</button>
                 <button type="submit" className="btn-modal-save">Save Changes</button>

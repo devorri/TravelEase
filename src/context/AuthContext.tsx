@@ -25,27 +25,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const savedUser = localStorage.getItem('travelease_user');
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch {
+        localStorage.removeItem('travelease_user');
+      }
     }
     setLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPassword = password.trim();
+
     // First try to find in admins table
+    let isAdmin = false;
     let { data, error } = await supabase
       .from('admins')
       .select('*')
-      .eq('email', email)
-      .eq('password', password)
+      .eq('email', trimmedEmail)
+      .eq('password', trimmedPassword)
       .single();
 
-    // If not found in admins, try users table
-    if (error || !data) {
+    if (data && !error) {
+      isAdmin = true;
+    } else {
+      // Not found in admins, try users table
       const userResult = await supabase
         .from('users')
         .select('*')
-        .eq('email', email)
-        .eq('password', password)
+        .eq('email', trimmedEmail)
+        .eq('password', trimmedPassword)
         .single();
       
       data = userResult.data;
@@ -53,14 +63,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     if (error || !data) {
-      throw new Error('Invalid email or password');
+      throw new Error('Invalid email or password. Please check your credentials and try again.');
     }
 
     const userData: User = {
       id: data.id,
       email: data.email,
       full_name: data.full_name,
-      role: data.role || 'user',
+      role: isAdmin ? 'admin' : 'user',
     };
 
     setUser(userData);
@@ -69,21 +79,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = async (email: string, password: string, fullName: string) => {
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPassword = password.trim();
+    const trimmedName = fullName.trim();
+
+    if (trimmedPassword.length < 6) {
+      throw new Error('Password must be at least 6 characters long.');
+    }
+
+    if (!trimmedName) {
+      throw new Error('Please enter your full name.');
+    }
+
+    // Check if email already exists
+    const { data: existing } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', trimmedEmail)
+      .single();
+
+    if (existing) {
+      throw new Error('An account with this email already exists. Please sign in instead.');
+    }
+
+    // Also check admins table
+    const { data: existingAdmin } = await supabase
+      .from('admins')
+      .select('id')
+      .eq('email', trimmedEmail)
+      .single();
+
+    if (existingAdmin) {
+      throw new Error('An account with this email already exists. Please sign in instead.');
+    }
+
     const { data, error } = await supabase
       .from('users')
-      .insert([{ email, password, full_name: fullName, role: 'user' }])
+      .insert([{ email: trimmedEmail, password: trimmedPassword, full_name: trimmedName }])
       .select()
       .single();
 
     if (error) {
-      throw new Error(error.message);
+      // Handle common Supabase errors
+      if (error.code === '23505') {
+        throw new Error('An account with this email already exists.');
+      }
+      if (error.code === '42501' || error.message.includes('policy')) {
+        throw new Error('Registration is temporarily unavailable. Please contact the administrator.');
+      }
+      throw new Error('Registration failed: ' + error.message);
+    }
+
+    if (!data) {
+      throw new Error('Registration failed. Please try again.');
     }
 
     const userData: User = {
       id: data.id,
       email: data.email,
       full_name: data.full_name,
-      role: data.role,
+      role: 'user',
     };
 
     setUser(userData);

@@ -1090,20 +1090,56 @@
 
 /* Printable Receipt Styling */
 @media print {
-  body * { visibility: hidden; }
-  .receipt-modal, .receipt-modal * { visibility: visible; }
-  .receipt-modal {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    box-shadow: none;
-    border: none;
+  /* Hide everything first */
+  body * {
+    visibility: hidden;
   }
-  .no-print { display: none !important; }
+
+  /* Show receipt and all its children */
+  #printable-receipt,
+  #printable-receipt * {
+    visibility: visible !important;
+  }
+
+  /* Position receipt for printing */
+  #printable-receipt {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 40px !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: white !important;
+    z-index: 99999 !important;
+  }
+
+  /* Show the overlay so the receipt is accessible */
+  .receipt-overlay {
+    visibility: visible !important;
+    position: fixed !important;
+    inset: 0 !important;
+    background: white !important;
+    z-index: 99998 !important;
+  }
+
+  /* Hide non-print elements */
+  .no-print,
+  .close-btn,
+  .btn-print {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Ensure receipt text is black */
+  .receipt-label { color: #333 !important; }
+  .receipt-value { color: #000 !important; }
+  .receipt-title { color: #000 !important; }
 }
+
 
 .receipt-modal {
   padding: 40px;
