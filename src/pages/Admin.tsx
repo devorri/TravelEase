@@ -29,8 +29,6 @@ const Admin: React.FC = () => {
   useEffect(() => { fetchCounts(); }, []);
   useEffect(() => { if (activePanel !== 'dashboard') fetchTableData(); }, [activePanel]);
 
-  const isBookingPanel = activePanel === 'hotel-bookings' || activePanel === 'flight-bookings';
-
   const fetchCounts = async () => {
     const [d, h, f, t, bh, bf, r] = await Promise.all([
       supabase.from('destinations').select('*', { count: 'exact', head: true }),

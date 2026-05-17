@@ -95,7 +95,6 @@ const Hotels: React.FC = () => {
     if (!selectedRoom) { notify('error', 'No Room Selected', 'Please select an available room from the list'); return; }
 
     const ref = `TE-HTL-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
-    const roomType = ROOM_TYPES.find(rt => rt.key === (selectedRoom.room_type || 'standard'));
 
     // FINAL AVAILABILITY CHECK (Avoid double booking)
     const { data: finalCheck } = await supabase
